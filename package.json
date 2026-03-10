@@ -1,0 +1,41 @@
+{
+  "name": "n8n-nodes-microlink",
+  "version": "0.1.0",
+  "description": "Microlink.io integration for n8n",
+  "license": "MIT",
+  "keywords": [
+    "n8n-community-node-package",
+    "microlink",
+    "n8n"
+  ],
+  "author": {
+    "name": "Microlink",
+    "email": "support@microlink.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microlinkhq/n8n-nodes-microlink.git"
+  },
+  "scripts": {
+    "lint": "eslint nodes credentials"
+  },
+  "files": [
+    "credentials",
+    "nodes"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "credentials/MicrolinkApi.credentials.js"
+    ],
+    "nodes": [
+      "nodes/Microlink/Microlink.node.js"
+    ]
+  },
+  "devDependencies": {
+    "eslint": "9.32.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
