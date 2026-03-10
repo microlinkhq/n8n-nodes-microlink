@@ -712,4 +712,4 @@ class Microlink {
 	}
 }
 
-module.exports = { Microlink };
+module.exports = { Microlink, isPlainObject, flattenObject, parseLooseValue, OBJECT_PARAMS };

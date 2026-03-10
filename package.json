@@ -17,7 +17,9 @@
     "url": "https://github.com/microlinkhq/n8n-nodes-microlink.git"
   },
   "scripts": {
-    "lint": "eslint nodes credentials"
+    "lint": "eslint nodes credentials",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "files": [
     "credentials",
@@ -33,7 +35,8 @@
     ]
   },
   "devDependencies": {
-    "eslint": "9.32.0"
+    "eslint": "9.32.0",
+    "jest": "^30.3.0"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
