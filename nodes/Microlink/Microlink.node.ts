@@ -431,6 +431,18 @@ export class Microlink {
 							default: '',
 						},
 						{
+							displayName: 'PDF Width',
+							name: 'pdfWidth',
+							type: 'string',
+							default: '',
+						},
+						{
+							displayName: 'PDF Height',
+							name: 'pdfHeight',
+							type: 'string',
+							default: '',
+						},
+						{
 							displayName: 'Viewport Width',
 							name: 'viewportWidth',
 							type: 'number',
@@ -655,14 +667,10 @@ export class Microlink {
 					['modules', options.modules],
 					['function', options.function],
 					['pdf.format', options.pdfFormat],
-					[
-						'viewport.width',
-						options.viewportWidth !== undefined ? options.viewportWidth : options.pdfWidth,
-					],
-					[
-						'viewport.height',
-						options.viewportHeight !== undefined ? options.viewportHeight : options.pdfHeight,
-					],
+					['pdf.width', options.pdfWidth],
+					['pdf.height', options.pdfHeight],
+					['viewport.width', options.viewportWidth],
+					['viewport.height', options.viewportHeight],
 					['viewport.deviceScaleFactor', options.viewportDeviceScaleFactor],
 					['viewport.isMobile', options.viewportIsMobile],
 					['viewport.hasTouch', options.viewportHasTouch],

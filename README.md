@@ -287,6 +287,8 @@ These options map to Microlink's `viewport.*` API parameters and are compatible 
 | Option | Type | API Parameter | Description |
 |--------|------|---------------|-------------|
 | PDF Format | `string` | `pdf.format` | Paper format: `A4`, `Letter`, `Legal`, etc. |
+| PDF Width | `string` | `pdf.width` | Custom page width (e.g., `"210mm"`). |
+| PDF Height | `string` | `pdf.height` | Custom page height (e.g., `"297mm"`). |
 | PDF Landscape | `boolean` | `pdf.landscape` | Landscape orientation. |
 | PDF Margin | `string` | `pdf.margin` | Page margin (e.g., `"10mm"`). |
 | PDF Page Ranges | `string` | `pdf.pageRanges` | Page range to print (e.g., `"1-3"`). |
@@ -449,7 +451,7 @@ credentials/
   MicrolinkApi.credentials.test.js     # 12 tests
 nodes/Microlink/
   Microlink.node.ts                    # source
-  Microlink.node.test.js               # 235 tests
+  Microlink.node.test.js               # 236 tests
 ```
 
 The `n8n-workflow` peer dependency is **fully mocked** — tests run without installing n8n itself. The mock provides `NodeConnectionTypes.Main` and a lightweight `NodeOperationError` class. The node's `execute()` method is tested by constructing a mock execution context that replicates n8n's runtime interface (`getInputData`, `getNodeParameter`, `getCredentials`, `helpers.httpRequest`, etc.) and calling `execute.call(mockContext)`.
@@ -487,7 +489,7 @@ All files                     |   99.24 |    96.09 |     100 |     100 |
 ------------------------------|---------|----------|---------|---------|
 ```
 
-**249 tests** across 2 test suites. 100% line and function coverage.
+**250 tests** across 2 test suites. 100% line and function coverage.
 
 ---
 

@@ -773,6 +773,8 @@ describe('execute() — Simple Options', () => {
 	describe('PDF-specific string options', () => {
 		const PDF_OPTIONS = [
 			['pdfFormat', 'pdf.format', 'A4'],
+			['pdfWidth', 'pdf.width', '210mm'],
+			['pdfHeight', 'pdf.height', '297mm'],
 			['pdfMargin', 'pdf.margin', '10mm'],
 			['pdfPageRanges', 'pdf.pageRanges', '1-3'],
 		];
@@ -788,16 +790,6 @@ describe('execute() — Simple Options', () => {
 		it('maps viewport width and height to viewport.* query params', async () => {
 			const ctx = createMockContext({
 				options: { viewportWidth: 640, viewportHeight: 400 },
-			});
-			await node.execute.call(ctx);
-			const qs = lastHttpCall(ctx).qs;
-			expect(qs['viewport.width']).toBe(640);
-			expect(qs['viewport.height']).toBe(400);
-		});
-
-		it('uses legacy pdfWidth/pdfHeight as fallback for backward compatibility', async () => {
-			const ctx = createMockContext({
-				options: { pdfWidth: 640, pdfHeight: 400 },
 			});
 			await node.execute.call(ctx);
 			const qs = lastHttpCall(ctx).qs;
@@ -1290,6 +1282,8 @@ describe('execute() — Option Overrides & Combinations', () => {
 			operation: 'pdf',
 			options: {
 				pdfFormat: 'A4',
+				pdfWidth: '210mm',
+				pdfHeight: '297mm',
 				pdfLandscape: true,
 				pdfMargin: '10mm',
 				pdfScale: 0.8,
@@ -1299,6 +1293,8 @@ describe('execute() — Option Overrides & Combinations', () => {
 		const qs = lastHttpCall(ctx).qs;
 		expect(qs.pdf).toBe(true);
 		expect(qs['pdf.format']).toBe('A4');
+		expect(qs['pdf.width']).toBe('210mm');
+		expect(qs['pdf.height']).toBe('297mm');
 		expect(qs['pdf.landscape']).toBe(true);
 		expect(qs['pdf.margin']).toBe('10mm');
 		expect(qs['pdf.scale']).toBe(0.8);
