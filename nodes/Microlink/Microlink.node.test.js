@@ -945,6 +945,19 @@ describe('execute() — Additional Parameters', () => {
 		expect(lastHttpCall(ctx).qs['data.author.selector']).toBe('.author');
 	});
 
+	it('supports screenshot as object payload via additional params', async () => {
+		const ctx = createMockContext({
+			operation: 'screenshot',
+			additionalParams: {
+				param: [{ key: 'screenshot', value: '{"fullPage":true}' }],
+			},
+		});
+		await node.execute.call(ctx);
+		const qs = lastHttpCall(ctx).qs;
+		expect(qs.screenshot).toBeUndefined();
+		expect(qs['screenshot.fullPage']).toBe(true);
+	});
+
 	it('handles absent param array gracefully', async () => {
 		const ctx = createMockContext({ additionalParams: {} });
 		await node.execute.call(ctx);
@@ -1183,6 +1196,19 @@ describe('execute() — Option Overrides & Combinations', () => {
 		expect(qs['screenshot.type']).toBe('jpeg');
 		expect(qs.device).toBe('iPhone X');
 		expect(qs.adblock).toBe(true);
+	});
+
+	it('supports screenshot option as object payload', async () => {
+		const ctx = createMockContext({
+			options: {
+				screenshot: { fullPage: true, type: 'jpeg' },
+			},
+		});
+		await node.execute.call(ctx);
+		const qs = lastHttpCall(ctx).qs;
+		expect(qs.screenshot).toBeUndefined();
+		expect(qs['screenshot.fullPage']).toBe(true);
+		expect(qs['screenshot.type']).toBe('jpeg');
 	});
 
 	it('combines PDF operation with PDF options', async () => {

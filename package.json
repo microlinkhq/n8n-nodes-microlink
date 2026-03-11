@@ -18,25 +18,29 @@
   },
   "scripts": {
     "lint": "eslint nodes credentials",
+    "build": "rm -rf dist && tsc --project tsconfig.json && mkdir -p dist/nodes/Microlink && cp nodes/Microlink/microlink.svg dist/nodes/Microlink/microlink.svg",
     "test": "jest",
     "test:coverage": "jest --coverage"
   },
   "files": [
-    "credentials",
-    "nodes"
+    "dist"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "credentials/MicrolinkApi.credentials.js"
+      "dist/credentials/MicrolinkApi.credentials.js"
     ],
     "nodes": [
-      "nodes/Microlink/Microlink.node.js"
+      "dist/nodes/Microlink/Microlink.node.js"
     ]
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.18.6",
     "eslint": "9.32.0",
-    "jest": "^30.3.0"
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "n8n-workflow": "*"

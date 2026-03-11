@@ -1,14 +1,20 @@
-'use strict';
+const { NodeConnectionTypes, NodeOperationError } = require('n8n-workflow') as {
+	NodeConnectionTypes: { Main: string };
+	NodeOperationError: new (node: unknown, error: Error | string, options?: { itemIndex?: number }) => Error;
+};
 
-const { NodeConnectionTypes, NodeOperationError } = require('n8n-workflow');
+export const OBJECT_PARAMS = new Set(['data', 'meta', 'headers', 'viewport', 'insights']);
+const BOOLEAN_OR_OBJECT_PARAMS = new Set(['screenshot', 'pdf']);
 
-const OBJECT_PARAMS = new Set(['data', 'meta', 'headers', 'viewport', 'insights']);
-
-function isPlainObject(value) {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-function flattenObject(prefix, obj, target) {
+export function flattenObject(
+	prefix: string,
+	obj: Record<string, unknown>,
+	target: Record<string, unknown>,
+): void {
 	for (const [key, value] of Object.entries(obj)) {
 		const path = prefix ? `${prefix}.${key}` : key;
 		if (isPlainObject(value)) {
@@ -21,7 +27,7 @@ function flattenObject(prefix, obj, target) {
 	}
 }
 
-function parseLooseValue(value) {
+export function parseLooseValue(value: unknown): unknown {
 	if (typeof value !== 'string') return value;
 	const trimmed = value.trim();
 	if (!trimmed) return value;
@@ -30,7 +36,10 @@ function parseLooseValue(value) {
 	if (!Number.isNaN(Number(trimmed)) && /^-?\d+(\.\d+)?$/.test(trimmed)) {
 		return Number(trimmed);
 	}
-	if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+	if (
+		(trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+		(trimmed.startsWith('[') && trimmed.endsWith(']'))
+	) {
 		try {
 			return JSON.parse(trimmed);
 		} catch {
@@ -40,7 +49,9 @@ function parseLooseValue(value) {
 	return value;
 }
 
-class Microlink {
+export class Microlink {
+	description: Record<string, unknown>;
+
 	constructor() {
 		this.description = {
 			displayName: 'Microlink',
@@ -524,24 +535,27 @@ class Microlink {
 		};
 	}
 
-	async execute() {
+	async execute(this: any): Promise<any[][]> {
 		const items = this.getInputData();
-		const returnItems = [];
+		const returnItems: any[] = [];
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 			try {
-				const operation = this.getNodeParameter('operation', itemIndex);
-				const url = this.getNodeParameter('url', itemIndex);
-				const responseMode = this.getNodeParameter('responseMode', itemIndex);
-				const options = this.getNodeParameter('options', itemIndex, {});
+				const operation = this.getNodeParameter('operation', itemIndex) as string;
+				const url = this.getNodeParameter('url', itemIndex) as string;
+				const responseMode = this.getNodeParameter('responseMode', itemIndex) as string;
+				const options = this.getNodeParameter('options', itemIndex, {}) as Record<string, unknown>;
 
-				const credentials = await this.getCredentials('microlinkApi');
+				const credentials = (await this.getCredentials('microlinkApi')) as
+					| { apiKey?: string; baseUrl?: string }
+					| null
+					| undefined;
 				const apiKey = credentials?.apiKey || '';
 				const baseUrl =
 					(credentials?.baseUrl || '').trim() ||
 					(apiKey ? 'https://pro.microlink.io' : 'https://api.microlink.io');
 
-				const paramBag = {};
+				const paramBag: Record<string, unknown> = {};
 
 				if (operation === 'screenshot') paramBag.screenshot = true;
 				if (operation === 'pdf') paramBag.pdf = true;
@@ -558,7 +572,7 @@ class Microlink {
 					paramBag.data = { markdown: { attr: 'markdown' } };
 				}
 
-				const simpleOptions = [
+				const simpleOptions: Array<[string, unknown]> = [
 					['adblock', options.adblock],
 					['animations', options.animations],
 					['audio', options.audio],
@@ -642,14 +656,18 @@ class Microlink {
 					};
 				}
 
-				const additionalParamsRaw = this.getNodeParameter('additionalParams', itemIndex, {});
+				const additionalParamsRaw = this.getNodeParameter('additionalParams', itemIndex, {}) as {
+					param?: Array<{ key?: string; value?: unknown }>;
+				};
 				const additionalParams = additionalParamsRaw.param || [];
 
-				const qs = { url };
+				const qs: Record<string, unknown> = { url };
 
 				for (const [key, value] of Object.entries(paramBag)) {
 					if (value === undefined || value === '' || value === null) continue;
-					if (OBJECT_PARAMS.has(key) && isPlainObject(value)) {
+
+					if (isPlainObject(value) && (OBJECT_PARAMS.has(key) || BOOLEAN_OR_OBJECT_PARAMS.has(key))) {
+						if (BOOLEAN_OR_OBJECT_PARAMS.has(key)) delete qs[key];
 						flattenObject(key, value, qs);
 					} else {
 						qs[key] = value;
@@ -661,6 +679,7 @@ class Microlink {
 					if (!key) continue;
 					const value = parseLooseValue(entry.value);
 					if (isPlainObject(value)) {
+						if (BOOLEAN_OR_OBJECT_PARAMS.has(key)) delete qs[key];
 						flattenObject(key, value, qs);
 					} else {
 						qs[key] = value;
@@ -669,9 +688,17 @@ class Microlink {
 
 				const shouldReturnBinary = responseMode === 'binary';
 				const shouldReturnText = responseMode === 'text';
-				const shouldAutoText = responseMode === 'auto' && typeof qs.embed === 'string' && qs.embed !== '';
+				const shouldAutoText =
+					responseMode === 'auto' && typeof qs.embed === 'string' && qs.embed !== '';
 
-				const requestOptions = {
+				const requestOptions: {
+					method: string;
+					url: string;
+					qs: Record<string, unknown>;
+					json: boolean;
+					headers: Record<string, string>;
+					encoding?: null;
+				} = {
 					method: 'GET',
 					url: baseUrl,
 					qs,
@@ -686,16 +713,16 @@ class Microlink {
 				const response = await this.helpers.httpRequest(requestOptions);
 
 				if (shouldReturnBinary) {
-					const binaryProperty = this.getNodeParameter('binaryProperty', itemIndex);
+					const binaryProperty = this.getNodeParameter('binaryProperty', itemIndex) as string;
 					const buffer = Buffer.isBuffer(response) ? response : Buffer.from(response);
-					const binaryData = await this.helpers.prepareBinaryData(buffer, qs.filename);
+					const binaryData = await this.helpers.prepareBinaryData(buffer, qs.filename as string | undefined);
 					returnItems.push({ json: {}, binary: { [binaryProperty]: binaryData } });
 				} else if (shouldReturnText || shouldAutoText) {
 					returnItems.push({ json: { data: response } });
 				} else {
 					returnItems.push({ json: response });
 				}
-			} catch (error) {
+			} catch (error: any) {
 				if (this.continueOnFail()) {
 					returnItems.push({ json: this.getInputData(itemIndex)[0].json, error, pairedItem: itemIndex });
 					continue;
@@ -711,5 +738,3 @@ class Microlink {
 		return [returnItems];
 	}
 }
-
-module.exports = { Microlink, isPlainObject, flattenObject, parseLooseValue, OBJECT_PARAMS };

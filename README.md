@@ -36,6 +36,7 @@
   - [parseLooseValue](#parseloosevalue)
   - [OBJECT\_PARAMS](#object_params)
 - [Testing](#testing)
+  - [Transpiling TypeScript](#transpiling-typescript)
   - [Running Tests](#running-tests)
   - [Test Architecture](#test-architecture)
   - [Why These Tests](#why-these-tests)
@@ -60,6 +61,7 @@
 git clone https://github.com/microlinkhq/n8n-nodes-microlink.git
 cd n8n-nodes-microlink
 npm install
+npm run build
 ```
 
 To link the node into a local n8n instance for testing:
@@ -73,6 +75,12 @@ npm link n8n-nodes-microlink
 
 # Start n8n
 npx n8n start
+```
+
+When developing locally, rebuild after source changes:
+
+```bash
+npm run build
 ```
 
 ---
@@ -302,6 +310,16 @@ For any Microlink API parameter not covered by the built-in options, use **Addit
 - Values are automatically parsed: `"true"` / `"false"` become booleans, numeric strings become numbers, and JSON strings are parsed and flattened.
 - Additional parameters are applied last and **override** any previously set options.
 
+This is also how to pass fields that support boolean **or** object payloads:
+
+```
+Key:   screenshot
+Value: true
+
+Key:   screenshot
+Value: {"fullPage":true}
+```
+
 ```
 Key:   data.price.selector
 Value: .product-price
@@ -373,6 +391,24 @@ The set of parameter keys that, when their value is a plain object, should be fl
 
 ## Testing
 
+### Transpiling TypeScript
+
+This project is authored in TypeScript and compiled to `dist/` for n8n runtime usage.
+
+```bash
+# Compile source into dist/
+npm run build
+```
+
+Generated artifacts:
+
+```
+dist/
+  credentials/MicrolinkApi.credentials.js
+  nodes/Microlink/Microlink.node.js
+  nodes/Microlink/microlink.svg
+```
+
 ### Running Tests
 
 ```bash
@@ -396,11 +432,11 @@ Tests are colocated next to the source files they cover, following n8n's own con
 
 ```
 credentials/
-  MicrolinkApi.credentials.js          # source
+  MicrolinkApi.credentials.ts          # source
   MicrolinkApi.credentials.test.js     # 12 tests
 nodes/Microlink/
-  Microlink.node.js                    # source
-  Microlink.node.test.js               # 221 tests
+  Microlink.node.ts                    # source
+  Microlink.node.test.js               # 223 tests
 ```
 
 The `n8n-workflow` peer dependency is **fully mocked** — tests run without installing n8n itself. The mock provides `NodeConnectionTypes.Main` and a lightweight `NodeOperationError` class. The node's `execute()` method is tested by constructing a mock execution context that replicates n8n's runtime interface (`getInputData`, `getNodeParameter`, `getCredentials`, `helpers.httpRequest`, etc.) and calling `execute.call(mockContext)`.
@@ -432,13 +468,13 @@ The test suite is organized into **focused layers**, each with a distinct purpos
 ------------------------------|---------|----------|---------|---------|
 File                          | % Stmts | % Branch | % Funcs | % Lines |
 ------------------------------|---------|----------|---------|---------|
-All files                     |   99.19 |    95.93 |     100 |     100 |
- MicrolinkApi.credentials.js  |     100 |      100 |     100 |     100 |
- Microlink.node.js            |   99.15 |    95.93 |     100 |     100 |
+All files                     |   99.24 |    96.09 |     100 |     100 |
+ MicrolinkApi.credentials.ts  |     100 |      100 |     100 |     100 |
+ Microlink.node.ts            |   99.21 |    96.09 |     100 |     100 |
 ------------------------------|---------|----------|---------|---------|
 ```
 
-**233 tests** across 2 test suites. 100% line and function coverage.
+**235 tests** across 2 test suites. 100% line and function coverage.
 
 ---
 
@@ -468,10 +504,10 @@ npm test
 The `files` field in `package.json` controls what gets published to npm. Ensure it includes only the necessary directories:
 
 ```json
-"files": ["credentials", "nodes"]
+"files": ["dist"]
 ```
 
-Test files (`*.test.js`) and dev configuration (`jest.config.js`) are intentionally included in the directories but do not affect n8n functionality. If you want to exclude them, add a `.npmignore`:
+Test files (`*.test.js`) and dev configuration (`jest.config.js`) are not published. If you want additional exclusions, add a `.npmignore`:
 
 ```
 **/*.test.js
