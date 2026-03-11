@@ -1,11 +1,10 @@
-<a href="https://microlink.io"><img src="https://cdn.microlink.io/banner/powered-by-microlink.png" alt="Powered by Microlink" width="200"></a>
-
 # n8n-nodes-microlink
 
 > Microlink.io integration for n8n — fetch metadata, screenshots, PDFs, Markdown, audio/video sources, performance insights, color palettes, and more from any URL.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![n8n community node](https://img.shields.io/badge/n8n-community%20node-ff6d5a.svg)](https://www.npmjs.com/package/n8n-nodes-microlink)
+<a href="https://microlink.io"><img src="https://img.shields.io/badge/powered_by-microlink.io-blue?style=flat-square&color=%23EA407B" alt="Powered by microlink.io"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple?style=flat-square&color=%237C3AED" alt="License: MIT"></a>
+<a href="https://www.npmjs.com/package/n8n-nodes-microlink"><img src="https://img.shields.io/badge/n8n-community%20node-teal?style=flat-square&color=%230EA5A0" alt="n8n community node"></a>
 
 ---
 
