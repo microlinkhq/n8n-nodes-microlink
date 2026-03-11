@@ -48,6 +48,12 @@ function parseLooseValue(value) {
     }
     return value;
 }
+function isMissingOptionalCredentialError(error) {
+    if (!error || typeof error !== 'object')
+        return false;
+    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return /does not require credentials|credentials?.*not.*set|credential.*not.*found|could not find credentials/i.test(message);
+}
 class Microlink {
     constructor() {
         this.description = {
@@ -97,6 +103,11 @@ class Microlink {
                             description: 'Return page content in Markdown',
                         },
                         {
+                            name: 'Text',
+                            value: 'text',
+                            description: 'Return page content as plain text',
+                        },
+                        {
                             name: 'Audio',
                             value: 'audio',
                             description: 'Detect playable audio sources',
@@ -107,19 +118,14 @@ class Microlink {
                             description: 'Detect playable video sources',
                         },
                         {
-                            name: 'Iframe',
-                            value: 'iframe',
-                            description: 'Return an embeddable iframe',
-                        },
-                        {
                             name: 'Insights',
                             value: 'insights',
                             description: 'Get performance and technology insights',
                         },
                         {
-                            name: 'Palette',
-                            value: 'palette',
-                            description: 'Extract dominant colors',
+                            name: 'Logo',
+                            value: 'logo',
+                            description: 'Return logo metadata, including logo.palette',
                         },
                     ],
                     default: 'extract',
@@ -202,20 +208,14 @@ class Microlink {
                             default: false,
                         },
                         {
-                            displayName: 'Iframe',
-                            name: 'iframe',
-                            type: 'boolean',
-                            default: false,
-                        },
-                        {
                             displayName: 'Insights',
                             name: 'insights',
                             type: 'boolean',
                             default: false,
                         },
                         {
-                            displayName: 'Palette',
-                            name: 'palette',
+                            displayName: 'Logo',
+                            name: 'logo',
                             type: 'boolean',
                             default: false,
                         },
@@ -425,16 +425,40 @@ class Microlink {
                             default: '',
                         },
                         {
-                            displayName: 'PDF Width',
-                            name: 'pdfWidth',
-                            type: 'string',
-                            default: '',
+                            displayName: 'Viewport Width',
+                            name: 'viewportWidth',
+                            type: 'number',
+                            default: 0,
                         },
                         {
-                            displayName: 'PDF Height',
-                            name: 'pdfHeight',
-                            type: 'string',
-                            default: '',
+                            displayName: 'Viewport Height',
+                            name: 'viewportHeight',
+                            type: 'number',
+                            default: 0,
+                        },
+                        {
+                            displayName: 'Viewport Device Scale Factor',
+                            name: 'viewportDeviceScaleFactor',
+                            type: 'number',
+                            default: 0,
+                        },
+                        {
+                            displayName: 'Viewport Is Mobile',
+                            name: 'viewportIsMobile',
+                            type: 'boolean',
+                            default: false,
+                        },
+                        {
+                            displayName: 'Viewport Has Touch',
+                            name: 'viewportHasTouch',
+                            type: 'boolean',
+                            default: false,
+                        },
+                        {
+                            displayName: 'Viewport Is Landscape',
+                            name: 'viewportIsLandscape',
+                            type: 'boolean',
+                            default: false,
                         },
                         {
                             displayName: 'PDF Landscape',
@@ -540,7 +564,16 @@ class Microlink {
                 const url = this.getNodeParameter('url', itemIndex);
                 const responseMode = this.getNodeParameter('responseMode', itemIndex);
                 const options = this.getNodeParameter('options', itemIndex, {});
-                const credentials = (await this.getCredentials('microlinkApi'));
+                let credentials;
+                try {
+                    credentials = (await this.getCredentials('microlinkApi'));
+                }
+                catch (error) {
+                    if (!isMissingOptionalCredentialError(error)) {
+                        throw error;
+                    }
+                    credentials = undefined;
+                }
                 const apiKey = credentials?.apiKey || '';
                 const baseUrl = (credentials?.baseUrl || '').trim() ||
                     (apiKey ? 'https://pro.microlink.io' : 'https://api.microlink.io');
@@ -553,11 +586,10 @@ class Microlink {
                     paramBag.audio = true;
                 if (operation === 'video')
                     paramBag.video = true;
-                if (operation === 'iframe')
-                    paramBag.iframe = true;
                 if (operation === 'insights')
                     paramBag.insights = true;
-                if (operation === 'palette')
+                // Microlink exposes palette data under the logo value (logo.palette).
+                if (operation === 'logo')
                     paramBag.palette = true;
                 if (operation === 'markdown') {
                     paramBag.force = true;
@@ -565,14 +597,22 @@ class Microlink {
                     paramBag.embed = 'markdown';
                     paramBag.data = { markdown: { attr: 'markdown' } };
                 }
+                if (operation === 'text') {
+                    paramBag.force = true;
+                    paramBag.meta = false;
+                    paramBag.embed = 'text';
+                    paramBag.data = { text: { attr: 'text' } };
+                }
                 const simpleOptions = [
                     ['adblock', options.adblock],
                     ['animations', options.animations],
                     ['audio', options.audio],
                     ['video', options.video],
-                    ['iframe', options.iframe],
                     ['insights', options.insights],
-                    ['palette', options.palette],
+                    [
+                        'palette',
+                        options.logo,
+                    ],
                     ['pdf', options.pdf],
                     ['screenshot', options.screenshot],
                     ['meta', options.meta],
@@ -601,8 +641,18 @@ class Microlink {
                     ['modules', options.modules],
                     ['function', options.function],
                     ['pdf.format', options.pdfFormat],
-                    ['pdf.width', options.pdfWidth],
-                    ['pdf.height', options.pdfHeight],
+                    [
+                        'viewport.width',
+                        options.viewportWidth !== undefined ? options.viewportWidth : options.pdfWidth,
+                    ],
+                    [
+                        'viewport.height',
+                        options.viewportHeight !== undefined ? options.viewportHeight : options.pdfHeight,
+                    ],
+                    ['viewport.deviceScaleFactor', options.viewportDeviceScaleFactor],
+                    ['viewport.isMobile', options.viewportIsMobile],
+                    ['viewport.hasTouch', options.viewportHasTouch],
+                    ['viewport.isLandscape', options.viewportIsLandscape],
                     ['pdf.landscape', options.pdfLandscape],
                     ['pdf.margin', options.pdfMargin],
                     ['pdf.pageRanges', options.pdfPageRanges],

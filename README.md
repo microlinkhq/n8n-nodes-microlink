@@ -1,6 +1,6 @@
 # n8n-nodes-microlink
 
-> Microlink.io integration for n8n — fetch metadata, screenshots, PDFs, Markdown, audio/video sources, performance insights, color palettes, and more from any URL.
+> Microlink.io integration for n8n — fetch metadata, screenshots, PDFs, Markdown, plain text, audio/video sources, performance insights, logo data (including `logo.palette`), and more from any URL.
 
 <a href="https://microlink.io"><img src="https://img.shields.io/badge/powered_by-microlink.io-blue?style=flat-square&color=%23EA407B" alt="Powered by microlink.io"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple?style=flat-square&color=%237C3AED" alt="License: MIT"></a>
@@ -17,15 +17,16 @@
   - [Screenshot](#screenshot)
   - [PDF](#pdf)
   - [Markdown](#markdown)
+  - [Text](#text)
   - [Audio](#audio)
   - [Video](#video)
-  - [Iframe](#iframe)
   - [Insights](#insights)
-  - [Palette](#palette)
+  - [Logo](#logo)
 - [Parameters Reference](#parameters-reference)
   - [Top-level Parameters](#top-level-parameters)
   - [Response Mode](#response-mode)
   - [Options](#options)
+  - [Viewport Options](#viewport-options)
   - [PDF Options](#pdf-options)
   - [Screenshot Options](#screenshot-options)
   - [JSON Options](#json-options)
@@ -116,7 +117,7 @@ Returns the full Microlink API JSON response with `status` and `data` fields.
 
 ### Screenshot
 
-Generates a browser-rendered screenshot of the target page. Combines with [screenshot options](#screenshot-options) for full-page captures, element targeting, overlays, and format control.
+Generates a browser-rendered screenshot of the target page. Combines with [viewport options](#viewport-options) and [screenshot options](#screenshot-options) for resolution, full-page captures, element targeting, overlays, and format control.
 
 ```
 Operation: Screenshot
@@ -127,7 +128,7 @@ Options → Screenshot Type: jpeg
 
 ### PDF
 
-Generates a PDF document of the target page. Combines with [PDF options](#pdf-options) for paper format, margins, landscape mode, and page ranges.
+Generates a PDF document of the target page. Combines with [viewport options](#viewport-options) and [PDF options](#pdf-options) for rendering size, paper format, margins, landscape mode, and page ranges.
 
 ```
 Operation: PDF
@@ -147,6 +148,17 @@ URL: https://example.com/blog/post
 
 Returns the Markdown string directly as `{ data: "# Page Title\n..." }`.
 
+### Text
+
+Returns the page content converted to plain text. This operation mirrors Markdown behavior but uses text extraction under the hood — it sets `force=true`, `meta=false`, `embed=text`, and extracts text via Microlink's `data` + `embed` pattern.
+
+```
+Operation: Text
+URL: https://example.com/blog/post
+```
+
+Returns the plain text string directly as `{ data: "Page Title ..." }`.
+
 ### Audio
 
 Detects and returns playable audio sources from the target page (e.g., podcasts, music embeds, audio players).
@@ -165,15 +177,6 @@ Operation: Video
 URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```
 
-### Iframe
-
-Returns an embeddable iframe representation of the target content.
-
-```
-Operation: Iframe
-URL: https://open.spotify.com/track/xxx
-```
-
 ### Insights
 
 Retrieves performance metrics and technology stack information for the target URL — Lighthouse scores, technology detection, and more.
@@ -183,12 +186,12 @@ Operation: Insights
 URL: https://example.com
 ```
 
-### Palette
+### Logo
 
-Extracts the dominant color palette from the target page.
+Returns logo metadata from the target page, including `logo.palette`.
 
 ```
-Operation: Palette
+Operation: Logo
 URL: https://example.com
 ```
 
@@ -200,7 +203,7 @@ URL: https://example.com
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| **Operation** | `options` | Yes | `extract` | One of: `extract`, `screenshot`, `pdf`, `markdown`, `audio`, `video`, `iframe`, `insights`, `palette`. |
+| **Operation** | `options` | Yes | `extract` | One of: `extract`, `screenshot`, `pdf`, `markdown`, `text`, `audio`, `video`, `insights`, `logo`. |
 | **URL** | `string` | Yes | — | The target URL to analyze. |
 | **Response Mode** | `options` | Yes | `auto` | How to return the response. See below. |
 | **Binary Property** | `string` | Only for `binary` mode | `data` | The output property name for binary data. |
@@ -246,9 +249,8 @@ All options are optional. Empty strings and zero values are automatically exclud
 | Meta | `boolean` | `meta` | Include metadata in the response (default: `true`). |
 | Audio | `boolean` | `audio` | Include audio sources in the response. |
 | Video | `boolean` | `video` | Include video sources in the response. |
-| Iframe | `boolean` | `iframe` | Include iframe data in the response. |
 | Insights | `boolean` | `insights` | Include performance insights in the response. |
-| Palette | `boolean` | `palette` | Include color palette in the response. |
+| Logo | `boolean` | `palette` | Include logo data (including `logo.palette`) in the response. |
 | PDF | `boolean` | `pdf` | Include PDF generation in the response. |
 | Screenshot | `boolean` | `screenshot` | Include screenshot in the response. |
 | Filter | `string` | `filter` | Filter response fields. |
@@ -267,13 +269,24 @@ All options are optional. Empty strings and zero values are automatically exclud
 | Ping | `boolean` | `ping` | Warm the cache without returning data. |
 | Proxy | `string` | `proxy` | Proxy mode or URL. |
 
+### Viewport Options
+
+These options map to Microlink's `viewport.*` API parameters and are compatible with screenshot and PDF rendering.
+
+| Option | Type | API Parameter | Description |
+|--------|------|---------------|-------------|
+| Viewport Width | `number` | `viewport.width` | Page width in pixels. |
+| Viewport Height | `number` | `viewport.height` | Page height in pixels. |
+| Viewport Device Scale Factor | `number` | `viewport.deviceScaleFactor` | Device pixel ratio / scale factor. |
+| Viewport Is Mobile | `boolean` | `viewport.isMobile` | Whether to emulate a mobile viewport. |
+| Viewport Has Touch | `boolean` | `viewport.hasTouch` | Whether touch events are available. |
+| Viewport Is Landscape | `boolean` | `viewport.isLandscape` | Whether to emulate landscape orientation. |
+
 ### PDF Options
 
 | Option | Type | API Parameter | Description |
 |--------|------|---------------|-------------|
 | PDF Format | `string` | `pdf.format` | Paper format: `A4`, `Letter`, `Legal`, etc. |
-| PDF Width | `string` | `pdf.width` | Custom width (e.g., `"210mm"`). |
-| PDF Height | `string` | `pdf.height` | Custom height (e.g., `"297mm"`). |
 | PDF Landscape | `boolean` | `pdf.landscape` | Landscape orientation. |
 | PDF Margin | `string` | `pdf.margin` | Page margin (e.g., `"10mm"`). |
 | PDF Page Ranges | `string` | `pdf.pageRanges` | Page range to print (e.g., `"1-3"`). |
@@ -299,7 +312,7 @@ For complex structured parameters, the node provides dedicated JSON fields that 
 | Data (JSON) | `data.*` | Custom data extraction rules. Example: `{ "author": { "selector": ".author", "attr": "text" } }` becomes `data.author.selector=.author&data.author.attr=text`. |
 | Meta (JSON) | `meta.*` | Custom meta extraction rules. |
 | Headers (JSON) | `headers.*` | Custom HTTP headers to send with the request. |
-| Viewport (JSON) | `viewport.*` | Custom viewport dimensions and settings. |
+| Viewport (JSON) | `viewport.*` | Custom viewport dimensions and settings (advanced/nested form). |
 | Insights (JSON) | `insights.*` | Insights configuration object. |
 
 ### Additional Query Parameters
@@ -436,7 +449,7 @@ credentials/
   MicrolinkApi.credentials.test.js     # 12 tests
 nodes/Microlink/
   Microlink.node.ts                    # source
-  Microlink.node.test.js               # 223 tests
+  Microlink.node.test.js               # 235 tests
 ```
 
 The `n8n-workflow` peer dependency is **fully mocked** — tests run without installing n8n itself. The mock provides `NodeConnectionTypes.Main` and a lightweight `NodeOperationError` class. The node's `execute()` method is tested by constructing a mock execution context that replicates n8n's runtime interface (`getInputData`, `getNodeParameter`, `getCredentials`, `helpers.httpRequest`, etc.) and calling `execute.call(mockContext)`.
@@ -450,11 +463,11 @@ The test suite is organized into **focused layers**, each with a distinct purpos
 | **Utility functions** (`isPlainObject`, `flattenObject`, `parseLooseValue`, `OBJECT_PARAMS`) | 27 | These pure functions are the foundation of query string construction. Testing them in isolation catches type-coercion bugs and edge cases (null, arrays, scientific notation, invalid JSON) before they propagate into API requests. |
 | **Credential structure** | 12 | Credentials are loaded by n8n based on their declared structure. Incorrect names, missing defaults, or wrong types cause silent failures at runtime. These tests lock down the contract. |
 | **Node description** | 17 | The description object is n8n's UI contract — operations, property types, defaults, and display conditions. A missing operation or wrong default can break the entire node in the n8n editor. Structural tests prevent regressions. |
-| **Operations** (9 operations) | 13 | Each operation maps to different query parameters. The markdown operation has special behavior (force, meta, embed, data extraction). Operation tests verify the correct flags reach the HTTP request. |
+| **Operations** (9 operations) | 15 | Each operation maps to different query parameters. The markdown and text operations have special behavior (force, meta, embed, data extraction). Operation tests verify the correct flags reach the HTTP request. |
 | **Response modes** (auto, json, text, binary) | 11 | Response handling has four distinct code paths including buffer conversion, binary property naming, and automatic text detection via `embed`. These tests verify each path produces the correct output shape. |
 | **Credentials & base URL** | 7 | The node auto-selects between free (`api.microlink.io`) and pro (`pro.microlink.io`) endpoints, handles custom URLs, whitespace trimming, and null/undefined credentials. These tests cover every routing combination. |
 | **Simple options** (boolean, string, number) | 58 | Every option type has different inclusion/exclusion rules: booleans pass through even when `false`, strings are excluded when empty, numbers are excluded when zero. Parametric `it.each` tests cover all options in both included and excluded states. |
-| **JSON options** (data, meta, headers, viewport, insights) | 9 | JSON options are merged with existing values and flattened into dot-notation. The merge logic is subtle — the markdown operation pre-sets `data`, and `insights` can be a boolean that needs overwriting. These tests verify correct merging and flattening. |
+| **JSON options** (data, meta, headers, viewport, insights) | 9 | JSON options are merged with existing values and flattened into dot-notation. The merge logic is subtle — markdown/text operations pre-set `data`, and `insights` can be a boolean that needs overwriting. These tests verify correct merging and flattening. |
 | **Additional parameters** | 7 | Additional params are the escape hatch for any API parameter. They support type coercion, JSON flattening, and override previously set values. Tests cover parsing, empty-key skipping, and override behavior. |
 | **Query string building** | 4 | Validates the final assembly: URL is always present, nulls are filtered, objects are flattened, scalars pass through. |
 | **Error handling** | 5 | Tests the three error paths: `NodeOperationError` wrapping, context preservation with `itemIndex`, and `continueOnFail` graceful degradation. |
@@ -474,7 +487,7 @@ All files                     |   99.24 |    96.09 |     100 |     100 |
 ------------------------------|---------|----------|---------|---------|
 ```
 
-**235 tests** across 2 test suites. 100% line and function coverage.
+**249 tests** across 2 test suites. 100% line and function coverage.
 
 ---
 

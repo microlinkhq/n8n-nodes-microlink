@@ -305,11 +305,11 @@ describe('Microlink Node Description', () => {
 			'screenshot',
 			'pdf',
 			'markdown',
+			'text',
 			'audio',
 			'video',
-			'iframe',
 			'insights',
-			'palette',
+			'logo',
 		];
 
 		let operationProp;
@@ -427,9 +427,8 @@ describe('execute() — Operations', () => {
 		['pdf', 'pdf'],
 		['audio', 'audio'],
 		['video', 'video'],
-		['iframe', 'iframe'],
 		['insights', 'insights'],
-		['palette', 'palette'],
+		['logo', 'palette'],
 	])('%s operation', (operation, qsKey) => {
 		it(`sets qs.${qsKey} = true`, async () => {
 			const ctx = createMockContext({ operation });
@@ -458,6 +457,31 @@ describe('execute() — Operations', () => {
 
 		it('makes the request with json=false', async () => {
 			const ctx = createMockContext({ operation: 'markdown' });
+			await node.execute.call(ctx);
+			expect(lastHttpCall(ctx).json).toBe(false);
+		});
+	});
+
+	describe('text operation', () => {
+		it('sets force, meta=false, embed, and data.text', async () => {
+			const ctx = createMockContext({ operation: 'text' });
+			await node.execute.call(ctx);
+			const qs = lastHttpCall(ctx).qs;
+			expect(qs.force).toBe(true);
+			expect(qs.meta).toBe(false);
+			expect(qs.embed).toBe('text');
+			expect(qs['data.text.attr']).toBe('text');
+		});
+
+		it('returns auto-text response (embed is set)', async () => {
+			const ctx = createMockContext({ operation: 'text' });
+			ctx.helpers.httpRequest.mockResolvedValue('Plain text content');
+			const result = await node.execute.call(ctx);
+			expect(result).toEqual([[{ json: { data: 'Plain text content' } }]]);
+		});
+
+		it('makes the request with json=false', async () => {
+			const ctx = createMockContext({ operation: 'text' });
 			await node.execute.call(ctx);
 			expect(lastHttpCall(ctx).json).toBe(false);
 		});
@@ -622,6 +646,21 @@ describe('execute() — Credentials', () => {
 		await node.execute.call(ctx);
 		expect(lastHttpCall(ctx).url).toBe('https://api.microlink.io');
 	});
+
+	it('continues without credentials when optional credential is not selected', async () => {
+		const ctx = createMockContext();
+		ctx.getCredentials.mockRejectedValue(new Error('Node does not require credentials'));
+		await node.execute.call(ctx);
+		const req = lastHttpCall(ctx);
+		expect(req.url).toBe('https://api.microlink.io');
+		expect(req.headers).toEqual({});
+	});
+
+	it('surfaces unexpected credential errors', async () => {
+		const ctx = createMockContext();
+		ctx.getCredentials.mockRejectedValue(new Error('Credential decryption failed'));
+		await expect(node.execute.call(ctx)).rejects.toThrow('Credential decryption failed');
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -635,16 +674,20 @@ describe('execute() — Simple Options', () => {
 
 	describe('boolean options', () => {
 		const BOOL_OPTIONS = [
-			'adblock', 'animations', 'audio', 'video', 'iframe', 'insights',
-			'palette', 'pdf', 'screenshot', 'meta', 'force', 'javascript',
+			'adblock', 'animations', 'audio', 'video', 'insights',
+			'logo', 'pdf', 'screenshot', 'meta', 'force', 'javascript',
 			'prerender', 'ping', 'pdfLandscape', 'screenshotFullPage',
-			'screenshotOmitBackground',
+			'screenshotOmitBackground', 'viewportIsMobile', 'viewportHasTouch', 'viewportIsLandscape',
 		];
 
 		const QS_KEY_MAP = {
 			pdfLandscape: 'pdf.landscape',
 			screenshotFullPage: 'screenshot.fullPage',
 			screenshotOmitBackground: 'screenshot.omitBackground',
+			logo: 'palette',
+			viewportIsMobile: 'viewport.isMobile',
+			viewportHasTouch: 'viewport.hasTouch',
+			viewportIsLandscape: 'viewport.isLandscape',
 		};
 
 		it.each(BOOL_OPTIONS)('includes %s when set to true', async (optName) => {
@@ -701,26 +744,35 @@ describe('execute() — Simple Options', () => {
 			['timeout', 30000],
 			['ttl', 86400],
 			['staleTtl', 3600],
+			['viewportWidth', 640],
+			['viewportHeight', 400],
+			['viewportDeviceScaleFactor', 0.5],
 		];
+
+		const QS_KEY_MAP = {
+			viewportWidth: 'viewport.width',
+			viewportHeight: 'viewport.height',
+			viewportDeviceScaleFactor: 'viewport.deviceScaleFactor',
+		};
 
 		it.each(NUMBER_OPTIONS)('includes %s when non-zero', async (optName, optValue) => {
 			const ctx = createMockContext({ options: { [optName]: optValue } });
 			await node.execute.call(ctx);
-			expect(lastHttpCall(ctx).qs[optName]).toBe(optValue);
+			const expectedKey = QS_KEY_MAP[optName] || optName;
+			expect(lastHttpCall(ctx).qs[expectedKey]).toBe(optValue);
 		});
 
 		it.each(NUMBER_OPTIONS)('excludes %s when zero', async (optName) => {
 			const ctx = createMockContext({ options: { [optName]: 0 } });
 			await node.execute.call(ctx);
-			expect(lastHttpCall(ctx).qs[optName]).toBeUndefined();
+			const expectedKey = QS_KEY_MAP[optName] || optName;
+			expect(lastHttpCall(ctx).qs[expectedKey]).toBeUndefined();
 		});
 	});
 
 	describe('PDF-specific string options', () => {
 		const PDF_OPTIONS = [
 			['pdfFormat', 'pdf.format', 'A4'],
-			['pdfWidth', 'pdf.width', '210mm'],
-			['pdfHeight', 'pdf.height', '297mm'],
 			['pdfMargin', 'pdf.margin', '10mm'],
 			['pdfPageRanges', 'pdf.pageRanges', '1-3'],
 		];
@@ -729,6 +781,28 @@ describe('execute() — Simple Options', () => {
 			const ctx = createMockContext({ options: { [optName]: value } });
 			await node.execute.call(ctx);
 			expect(lastHttpCall(ctx).qs[qsKey]).toBe(value);
+		});
+	});
+
+	describe('viewport options', () => {
+		it('maps viewport width and height to viewport.* query params', async () => {
+			const ctx = createMockContext({
+				options: { viewportWidth: 640, viewportHeight: 400 },
+			});
+			await node.execute.call(ctx);
+			const qs = lastHttpCall(ctx).qs;
+			expect(qs['viewport.width']).toBe(640);
+			expect(qs['viewport.height']).toBe(400);
+		});
+
+		it('uses legacy pdfWidth/pdfHeight as fallback for backward compatibility', async () => {
+			const ctx = createMockContext({
+				options: { pdfWidth: 640, pdfHeight: 400 },
+			});
+			await node.execute.call(ctx);
+			const qs = lastHttpCall(ctx).qs;
+			expect(qs['viewport.width']).toBe(640);
+			expect(qs['viewport.height']).toBe(400);
 		});
 	});
 
