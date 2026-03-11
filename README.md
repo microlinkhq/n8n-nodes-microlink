@@ -220,6 +220,7 @@ URL: https://example.com
 ### Options
 
 All options are optional. Empty strings and zero values are automatically excluded from the request.
+For `screenshot`, `pdf`, and `insights`, when nested options are present (e.g. `screenshot.fullPage`, `pdf.width`, `insights.lighthouse`), the node omits the top-level boolean (`screenshot=true`, `pdf=true`, `insights=true`) so nested values are not overridden.
 
 #### Browser & Rendering
 
@@ -302,7 +303,8 @@ These options map to Microlink's `viewport.*` API parameters and are compatible 
 | Screenshot Full Page | `boolean` | `screenshot.fullPage` | Capture the entire scrollable page. |
 | Screenshot Element | `string` | `screenshot.element` | CSS selector to capture a specific element. |
 | Screenshot Omit Background | `boolean` | `screenshot.omitBackground` | Transparent background. |
-| Screenshot Overlay | `string` | `screenshot.overlay` | Overlay configuration. |
+| Screenshot Overlay Background | `string` | `screenshot.overlay.background` | Overlay background. Default: `linear-gradient(225deg, #FF057C 0%, #8D0B93 50%, #321575 100%)`. |
+| Screenshot Overlay Browser | `string` | `screenshot.overlay.browser` | Overlay browser theme. Default: `dark`. |
 | Screenshot Code Scheme | `string` | `screenshot.codeScheme` | Syntax highlighting theme. |
 
 ### JSON Options
@@ -451,7 +453,7 @@ credentials/
   MicrolinkApi.credentials.test.js     # 12 tests
 nodes/Microlink/
   Microlink.node.ts                    # source
-  Microlink.node.test.js               # 236 tests
+  Microlink.node.test.js               # 240 tests
 ```
 
 The `n8n-workflow` peer dependency is **fully mocked** — tests run without installing n8n itself. The mock provides `NodeConnectionTypes.Main` and a lightweight `NodeOperationError` class. The node's `execute()` method is tested by constructing a mock execution context that replicates n8n's runtime interface (`getInputData`, `getNodeParameter`, `getCredentials`, `helpers.httpRequest`, etc.) and calling `execute.call(mockContext)`.
@@ -489,7 +491,7 @@ All files                     |   99.24 |    96.09 |     100 |     100 |
 ------------------------------|---------|----------|---------|---------|
 ```
 
-**250 tests** across 2 test suites. 100% line and function coverage.
+**254 tests** across 2 test suites. 100% line and function coverage.
 
 ---
 

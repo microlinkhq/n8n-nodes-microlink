@@ -381,6 +381,18 @@ describe('Microlink Node Description', () => {
 			expect(prop.type).toBe('collection');
 			expect(prop.options.length).toBeGreaterThan(0);
 		});
+
+		it('sets screenshot overlay background/browser defaults', () => {
+			const prop = node.description.properties.find((p) => p.name === 'options');
+			const overlayBackground = prop.options.find(
+				(option) => option.name === 'screenshotOverlayBackground',
+			);
+			const overlayBrowser = prop.options.find((option) => option.name === 'screenshotOverlayBrowser');
+			expect(overlayBackground.default).toBe(
+				'linear-gradient(225deg, #FF057C 0%, #8D0B93 50%, #321575 100%)',
+			);
+			expect(overlayBrowser.default).toBe('dark');
+		});
 	});
 
 	describe('additionalParams', () => {
@@ -816,7 +828,12 @@ describe('execute() — Simple Options', () => {
 		const SS_OPTIONS = [
 			['screenshotType', 'screenshot.type', 'jpeg'],
 			['screenshotElement', 'screenshot.element', '#main'],
-			['screenshotOverlay', 'screenshot.overlay', '{}'],
+			[
+				'screenshotOverlayBackground',
+				'screenshot.overlay.background',
+				'linear-gradient(225deg, #FF057C 0%, #8D0B93 50%, #321575 100%)',
+			],
+			['screenshotOverlayBrowser', 'screenshot.overlay.browser', 'dark'],
 			['screenshotCodeScheme', 'screenshot.codeScheme', 'dracula'],
 		];
 
@@ -824,6 +841,21 @@ describe('execute() — Simple Options', () => {
 			const ctx = createMockContext({ options: { [optName]: value } });
 			await node.execute.call(ctx);
 			expect(lastHttpCall(ctx).qs[qsKey]).toBe(value);
+		});
+
+		it('supports legacy screenshotOverlay JSON string', async () => {
+			const ctx = createMockContext({
+				options: {
+					screenshotOverlay:
+						'{"background":"linear-gradient(225deg, #FF057C 0%, #8D0B93 50%, #321575 100%)","browser":"dark"}',
+				},
+			});
+			await node.execute.call(ctx);
+			const qs = lastHttpCall(ctx).qs;
+			expect(qs['screenshot.overlay.background']).toBe(
+				'linear-gradient(225deg, #FF057C 0%, #8D0B93 50%, #321575 100%)',
+			);
+			expect(qs['screenshot.overlay.browser']).toBe('dark');
 		});
 	});
 
@@ -926,6 +958,7 @@ describe('execute() — JSON Options', () => {
 		});
 		await node.execute.call(ctx);
 		const qs = lastHttpCall(ctx).qs;
+		expect(qs.insights).toBeUndefined();
 		expect(qs['insights.lighthouse']).toBe(true);
 	});
 });
@@ -1022,6 +1055,19 @@ describe('execute() — Additional Parameters', () => {
 		const qs = lastHttpCall(ctx).qs;
 		expect(qs.screenshot).toBeUndefined();
 		expect(qs['screenshot.fullPage']).toBe(true);
+	});
+
+	it('removes insights=true when nested insights.* params are present', async () => {
+		const ctx = createMockContext({
+			operation: 'insights',
+			additionalParams: {
+				param: [{ key: 'insights.lighthouse', value: 'true' }],
+			},
+		});
+		await node.execute.call(ctx);
+		const qs = lastHttpCall(ctx).qs;
+		expect(qs.insights).toBeUndefined();
+		expect(qs['insights.lighthouse']).toBe(true);
 	});
 
 	it('handles absent param array gracefully', async () => {
@@ -1257,7 +1303,7 @@ describe('execute() — Option Overrides & Combinations', () => {
 		});
 		await node.execute.call(ctx);
 		const qs = lastHttpCall(ctx).qs;
-		expect(qs.screenshot).toBe(true);
+		expect(qs.screenshot).toBeUndefined();
 		expect(qs['screenshot.fullPage']).toBe(true);
 		expect(qs['screenshot.type']).toBe('jpeg');
 		expect(qs.device).toBe('iPhone X');
@@ -1291,7 +1337,7 @@ describe('execute() — Option Overrides & Combinations', () => {
 		});
 		await node.execute.call(ctx);
 		const qs = lastHttpCall(ctx).qs;
-		expect(qs.pdf).toBe(true);
+		expect(qs.pdf).toBeUndefined();
 		expect(qs['pdf.format']).toBe('A4');
 		expect(qs['pdf.width']).toBe('210mm');
 		expect(qs['pdf.height']).toBe('297mm');
@@ -1330,7 +1376,7 @@ describe('execute() — Option Overrides & Combinations', () => {
 		const req = lastHttpCall(ctx);
 		expect(req.url).toBe('https://pro.microlink.io');
 		expect(req.headers['x-api-key']).toBe('pro-key');
-		expect(req.qs.screenshot).toBe(true);
+		expect(req.qs.screenshot).toBeUndefined();
 		expect(req.qs.adblock).toBe(true);
 		expect(req.qs['screenshot.fullPage']).toBe(true);
 		expect(req.qs['data.author.selector']).toBe('.author');

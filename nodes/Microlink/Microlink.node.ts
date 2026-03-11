@@ -527,10 +527,16 @@ export class Microlink {
 							default: false,
 						},
 						{
-							displayName: 'Screenshot Overlay',
-							name: 'screenshotOverlay',
+							displayName: 'Screenshot Overlay Background',
+							name: 'screenshotOverlayBackground',
 							type: 'string',
-							default: '',
+							default: 'linear-gradient(225deg, #FF057C 0%, #8D0B93 50%, #321575 100%)',
+						},
+						{
+							displayName: 'Screenshot Overlay Browser',
+							name: 'screenshotOverlayBrowser',
+							type: 'string',
+							default: 'dark',
 						},
 						{
 							displayName: 'Screenshot Code Scheme',
@@ -629,6 +635,19 @@ export class Microlink {
 					paramBag.data = { text: { attr: 'text' } };
 				}
 
+				// Backward compatibility: older workflows may still provide `screenshotOverlay`
+				// as a JSON string object with `background` / `browser`.
+				const legacyScreenshotOverlay = parseLooseValue(options.screenshotOverlay);
+				const legacyOverlayObject = isPlainObject(legacyScreenshotOverlay)
+					? (legacyScreenshotOverlay as Record<string, unknown>)
+					: undefined;
+				const screenshotOverlayBackground =
+					options.screenshotOverlayBackground ?? legacyOverlayObject?.background;
+				const screenshotOverlayBrowser =
+					options.screenshotOverlayBrowser ??
+					legacyOverlayObject?.browser ??
+					legacyOverlayObject?.broswer;
+
 				const simpleOptions: Array<[string, unknown]> = [
 					['adblock', options.adblock],
 					['animations', options.animations],
@@ -683,7 +702,8 @@ export class Microlink {
 					['screenshot.fullPage', options.screenshotFullPage],
 					['screenshot.element', options.screenshotElement],
 					['screenshot.omitBackground', options.screenshotOmitBackground],
-					['screenshot.overlay', options.screenshotOverlay],
+					['screenshot.overlay.background', screenshotOverlayBackground],
+					['screenshot.overlay.browser', screenshotOverlayBrowser],
 					['screenshot.codeScheme', options.screenshotCodeScheme],
 				];
 
@@ -748,6 +768,14 @@ export class Microlink {
 						flattenObject(key, value, qs);
 					} else {
 						qs[key] = value;
+					}
+				}
+
+				// For params that support boolean OR object form, nested keys should win.
+				// Example: screenshot.fullPage implies screenshot=true, so keep only screenshot.*.
+				for (const key of ['screenshot', 'pdf', 'insights']) {
+					if (Object.keys(qs).some((queryKey) => queryKey.startsWith(`${key}.`))) {
+						delete qs[key];
 					}
 				}
 
