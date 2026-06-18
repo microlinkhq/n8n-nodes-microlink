@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-microlink",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Microlink.io integration for n8n",
   "license": "MIT",
   "keywords": [
