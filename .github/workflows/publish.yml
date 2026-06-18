@@ -18,10 +18,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20 # npm 9.5+ ships with Node 20 → provenance supported
+          node-version: 22 # current LTS; npm 10 supports provenance (≥9.5)
           registry-url: 'https://registry.npmjs.org'
 
-      - run: npm ci
+      # --ignore-scripts skips native postinstall builds (e.g. isolated-vm, pulled
+      # transitively via the n8n-workflow peer dep). We never run that code — the
+      # node mocks n8n-workflow in tests — and building it can fail on the runner.
+      - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm test
       - run: npm run build
