@@ -1,5 +1,9 @@
 # Publishes to npm with a provenance statement (required for n8n verified
 # community nodes since 2026-05-01). Triggers when you publish a GitHub Release.
+#
+# Auth: npm Trusted Publishing (OIDC) — no NPM_TOKEN secret. GitHub's id-token
+# is exchanged for a short-lived publish credential and provenance is attached
+# automatically. Nothing to store or rotate.
 
 name: Publish to npm
 
@@ -12,14 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # REQUIRED: lets npm attach the provenance statement
+      id-token: write # REQUIRED: OIDC token for trusted publishing + provenance
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22 # current LTS; npm 10 supports provenance (≥9.5)
+          node-version: 22 # current LTS (>= 22.14 required for trusted publishing)
           registry-url: 'https://registry.npmjs.org'
+
+      # Node 22 ships npm 10; trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
 
       # --ignore-scripts skips native postinstall builds (e.g. isolated-vm, pulled
       # transitively via the n8n-workflow peer dep). We never run that code — the
@@ -29,14 +36,13 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      # No NODE_AUTH_TOKEN: auth comes from the OIDC token above via trusted publishing.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-# Setup, one time:
-# 1. Create an npm "Automation" (or granular) access token with publish rights.
-# 2. Add it to the repo: Settings > Secrets and variables > Actions > New secret,
-#    name it NPM_TOKEN.
-# 3. To release: bump version (npm version patch/minor/major), push the tag,
-#    then create a GitHub Release for that tag — this workflow runs and publishes
-#    with provenance. Confirm the npm page shows the "Provenance" badge.
+# One-time setup (already done once the package exists):
+# 1. On npmjs.com: Packages > n8n-nodes-microlink > Settings > Trusted Publishing >
+#    add a GitHub Actions publisher — org "microlinkhq", repo "n8n-nodes-microlink",
+#    workflow file "publish.yml".
+# 2. To release: bump version (npm version patch/minor/major), push the tag, then
+#    create a GitHub Release for that tag — this workflow runs and publishes with
+#    provenance. Confirm the npm page shows the "Provenance" badge.
