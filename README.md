@@ -117,7 +117,7 @@ Returns the full Microlink API JSON response with `status` and `data` fields.
 
 ### Screenshot
 
-Generates a browser-rendered screenshot of the target page. Combines with [viewport options](#viewport-options) and [screenshot options](#screenshot-options) for resolution, full-page captures, element targeting, overlays, and format control.
+Generates a [browser-rendered screenshot](https://microlink.io/screenshot) of the target page. Combines with [viewport options](#viewport-options) and [screenshot options](#screenshot-options) for resolution, full-page captures, element targeting, overlays, and format control.
 
 ```
 Operation: Screenshot
@@ -236,7 +236,7 @@ For `screenshot`, `pdf`, and `insights`, when nested options are present (e.g. `
 | Wait For Timeout | `number` | `waitForTimeout` | Wait a fixed number of milliseconds. |
 | Wait Until | `string` | `waitUntil` | Navigation event: `load`, `domcontentloaded`, `networkidle0`, `networkidle2`. |
 | Device | `string` | `device` | Emulate a device (e.g., `"iPhone X"`, `"Pixel 5"`). |
-| Color Scheme | `string` | `colorScheme` | Force `"light"` or `"dark"` color scheme. |
+| Color Scheme | `options` | `colorScheme` | Force a preferred color scheme: `dark`, `light`, or `no-preference`. |
 | Media Type | `string` | `mediaType` | CSS media type: `"screen"` or `"print"`. |
 | Scripts | `string` | `scripts` | Inject external script URLs. |
 | Styles | `string` | `styles` | Inject CSS styles. |
@@ -264,9 +264,9 @@ For `screenshot`, `pdf`, and `insights`, when nested options are present (e.g. `
 |--------|------|---------------|-------------|
 | Force | `boolean` | `force` | Bypass the cache and generate a fresh response. |
 | Retry | `number` | `retry` | Number of retry attempts on failure. |
-| Timeout (ms) | `number` | `timeout` | Maximum time to wait for the page in milliseconds. |
-| TTL (seconds) | `number` | `ttl` | Cache time-to-live in seconds. |
-| Stale TTL (seconds) | `number` | `staleTtl` | Stale cache TTL in seconds. |
+| Timeout (Milliseconds) | `number` | `timeout` | Maximum time to wait for the page in milliseconds. |
+| TTL (Seconds) | `number` | `ttl` | Cache time-to-live in seconds. |
+| Stale TTL (Seconds) | `number` | `staleTtl` | Stale cache TTL in seconds. |
 | Ping | `boolean` | `ping` | Warm the cache without returning data. |
 | Proxy | `string` | `proxy` | Proxy mode or URL. |
 
@@ -497,70 +497,48 @@ All files                     |   99.24 |    96.09 |     100 |     100 |
 
 ## Publishing to n8n
 
-Follow these steps to publish the node as an n8n community package on npm.
+This package is published to npm by GitHub Actions with a [provenance](https://docs.npmjs.com/generating-provenance-statements) statement. Since **2026-05-01**, n8n [verified community nodes](https://docs.n8n.io/integrations/community-nodes/) must be published from CI with provenance — nodes published from a local machine are rejected for verification. (A plain local `npm publish` still works for an unverified npm/community install, but it will not pass verification.)
+
+The release pipeline lives in [`.github/workflows/publish.yml`](.github/workflows/publish.yml): on every published GitHub Release it runs lint, tests, and build, then `npm publish --provenance --access public`.
 
 ### 1. Prerequisites
 
-- A [npm account](https://www.npmjs.com/signup).
-- Node.js 18+ installed.
+- A [npm account](https://www.npmjs.com/signup) with publish rights to the package.
 - The `package.json` `name` field must start with `n8n-nodes-` (already set to `n8n-nodes-microlink`).
 - The `n8n` field in `package.json` must list all credential and node files (already configured).
 - The `keywords` array must include `"n8n-community-node-package"` (already present).
 
-### 2. Verify the package
+### 2. One-time setup: `NPM_TOKEN` secret
 
-Run lint and tests to make sure everything is clean:
+1. Create an npm **Automation** (or **Granular**) access token with publish rights.
+2. In the GitHub repo, open **Settings → Secrets and variables → Actions → New repository secret**.
+3. Name it `NPM_TOKEN` and paste the token.
+
+### 3. Verify locally before releasing
+
+CI re-runs these, but check them first to avoid a failed release:
 
 ```bash
 npm run lint
 npm test
+npm run build
 ```
 
-### 3. Review the `files` field
-
-The `files` field in `package.json` controls what gets published to npm. Ensure it includes only the necessary directories:
-
-```json
-"files": ["dist"]
-```
-
-Test files (`*.test.js`) and dev configuration (`jest.config.js`) are not published. If you want additional exclusions, add a `.npmignore`:
-
-```
-**/*.test.js
-jest.config.js
-coverage/
-```
-
-### 4. Set the version
-
-Update the version in `package.json` following [semver](https://semver.org/):
+### 4. Cut a release
 
 ```bash
-npm version patch   # 0.1.0 → 0.1.1 (bug fixes)
-npm version minor   # 0.1.0 → 0.2.0 (new features)
-npm version major   # 0.1.0 → 1.0.0 (breaking changes)
+npm version patch   # 0.1.0 → 0.1.1 (bug fixes); use minor / major as appropriate
+git push --follow-tags
 ```
 
-### 5. Log in to npm
+Then create a **GitHub Release** for the new tag (**Releases → Draft a new release → choose the tag → Publish release**). Publishing the release triggers `publish.yml`, which publishes to npm with provenance.
 
-```bash
-npm login
-```
+### 5. Verify the publish
 
-### 6. Publish
+- Watch the **Actions** tab for the "Publish to npm" run to finish green.
+- Visit `https://www.npmjs.com/package/n8n-nodes-microlink` and confirm the **Provenance** badge appears on the new version.
 
-```bash
-npm publish --access public
-```
-
-The `--access public` flag is required for scoped packages or first-time publishes.
-
-### 7. Verify on npm
-
-Visit `https://www.npmjs.com/package/n8n-nodes-microlink` to confirm the package is live.
-
-### 8. Install in n8n
+### 6. Install in n8n
 
 Once published, any n8n user can install it:
 
@@ -570,9 +548,9 @@ Once published, any n8n user can install it:
 
 The node appears in the editor immediately — no restart required on n8n Cloud. Self-hosted instances may need a restart.
 
-### 9. Update the package
+### 7. Subsequent releases
 
-For subsequent releases, repeat steps 2-6. n8n Cloud picks up new versions automatically. Self-hosted users update via **Settings > Community Nodes > Update**.
+Repeat steps 3–5: bump the version, push the tag, and publish a GitHub Release. n8n Cloud picks up new versions automatically; self-hosted users update via **Settings > Community Nodes > Update**.
 
 ---
 
